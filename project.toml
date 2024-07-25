@@ -1,0 +1,16 @@
+[project]
+name = "edgar"
+version = "0.1.0"
+description = "Enrichment Driven Graph Recommender Aid"
+authors = ["Chris Bizon <cbizon@renci.org>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://answercoalesce-test.apps.renci.org/query"
+repository = "https://github.com/wumirose/Edgar.git"
+
+[tool.poetry]
+# Additional Poetry-specific configuration here
+
+[tool.poetry.dependencies]
+python = ">=3.12.4,<4.0"
+
