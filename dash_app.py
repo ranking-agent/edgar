@@ -18,6 +18,9 @@ app = DashProxy(
     use_pages=True
 )
 
+server = app.server
+
+
 tk = bmt.Toolkit()
 AC_URL = "https://answercoalesce-test.apps.renci.org/query"
 all_node_classes = tk.get_all_classes('entity')

@@ -1,11 +1,12 @@
 # Use an official Python runtime as a parent image
-FROM python:3.9-slim
+FROM ghcr.io/translatorsri/renci-python-image:3.12.4
 
 #Build from this branch.  Assume master for this repo
-ARG BRANCH_NAME=master
+ARG BRANCH_NAME=main
 
 # update the container
 RUN apt-get update
+RUN apt install git
 
 # make a directory for the repo
 RUN mkdir /repo
@@ -18,7 +19,7 @@ RUN git clone --branch $BRANCH_NAME --single-branch https://github.com/wumirose/
 
 
 # go to the repo dir
-WORKDIR /repo/EDGAR_UI
+WORKDIR /repo/Edgar
 
 
 RUN chmod 777 -R .
