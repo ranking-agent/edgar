@@ -5,35 +5,38 @@ def qg_template():
     return '''{
         "query_graph": {
             "nodes": {
-                "$source": {
+                "drug": {
                     "ids": $source_id,
                     "constraints": [],
                     "is_set": false,
                     "categories":  $source_category
                 },
-                "$target": {
+                "disease": {
                     "ids": $target_id,
                     "is_set": false,
                     "constraints": [],
                     "categories": $target_category
-                    }
+                }
             },
             "edges": {
                 "e00": {
-                    "subject": "$source",
-                    "object": "$target",
+                    "subject": "drug",
+                    "object": "disease",
                     "predicates": $predicate,
                     "knowledge_type": "inferred",
                     "attribute_constraints": [],
                     "qualifier_constraints": $qualifier
-
                 }
             }
         }
-    }
-'''
+    }'''
 
-def get_qg(curie, is_source, predicates, source_category = '', target_category='',  object_aspect_qualifier=None, object_direction_qualifier=None):
+
+def get_qg( curie, is_source, predicates, source_category='', target_category='', object_aspect_qualifier=None,
+            object_direction_qualifier=None ):
+    # print('curie= ', curie, '\nis_source = ', is_source, '\npredicates = ', predicates, '\nsource_category = ',
+    #       source_category, '\ntarget_category = ', target_category)
+
     if not is_source:
         target_ids = curie
         source_ids = []
@@ -41,17 +44,8 @@ def get_qg(curie, is_source, predicates, source_category = '', target_category='
         source_ids = curie
         target_ids = []
 
-
-    source = source_category.split(":")[1].lower() if source_category else 'n0'
-    target = target_category.split(":")[1].lower() if target_category else 'n1'
-    query_template = Template(qg_template())
-    query = {}
-
     source_category = [source_category] if source_category else []
     target_category = [target_category] if target_category else []
-    # source_ids = source_ids if source_ids != None else []
-
-    # is_source = True if source_ids else False
 
     quali = []
     if object_aspect_qualifier and object_direction_qualifier:
@@ -70,22 +64,18 @@ def get_qg(curie, is_source, predicates, source_category = '', target_category='
             }
         ]
 
-
-    qs = query_template.substitute(source=source, target=target, source_id=json.dumps(source_ids),
-                                   target_id=json.dumps(target_ids),
+    query_template = Template(qg_template())
+    qs = query_template.substitute(source_id=json.dumps(source_ids), target_id=json.dumps(target_ids),
                                    source_category=json.dumps(source_category),
-                                   target_category=json.dumps(target_category), predicate=json.dumps(predicates),
-                                   qualifier=json.dumps(quali))
+                                   target_category=json.dumps(target_category),
+                                   predicate=json.dumps(predicates), qualifier=json.dumps(quali))
 
-    try:
-        query = json.loads(qs)
-        if not is_source:
-            del query["query_graph"]["nodes"][source]["ids"]
-            # query["query_graph"]["nodes"][target]["is_set"] = True
-        else:
-            del query["query_graph"]["nodes"][target]["ids"]
-            # query["query_graph"]["nodes"][source]["is_set"] = True
-    except UnicodeDecodeError as e:
-        print(e)
-    # print('query: ', query)
-    return query
+    query = json.loads(qs)
+    if not is_source:
+        del query["query_graph"]["nodes"]["drug"]["ids"]
+        query["query_graph"]["nodes"]["disease"]["ids"] = target_ids
+    else:
+        del query["query_graph"]["nodes"]["disease"]["ids"]
+        query["query_graph"]["nodes"]["drug"]["ids"] = source_ids
+
+    return {"message": query}
