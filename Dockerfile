@@ -15,11 +15,11 @@ RUN mkdir /repo
 WORKDIR /repo
 
 # get the latest code
-RUN git clone --branch $BRANCH_NAME --single-branch https://github.com/wumirose/Edgar.git
+RUN git clone --branch $BRANCH_NAME --single-branch https://github.com/ranking-agent/edgar.git
 
 
 # go to the repo dir
-WORKDIR /repo/Edgar
+WORKDIR /repo/edgar
 
 
 RUN chmod 777 -R .

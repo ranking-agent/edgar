@@ -37,10 +37,10 @@ def send_post_request(data):
         end_time = time.time()  # Record end time
         elapsed_time = end_time - start_time  # Calculate elapsed time
         print(f"Time taken for POST request: {elapsed_time} seconds")
-    except requests.exceptions.HTTPError as http_err:
+    except requests.exceptions.HTTPError as e:
         logger.error(f"Error in send_post_request function: {type(e).__name__}: {str(e)}")
-        response_data = f"HTTP error occurred: {http_err}"
-        print(f"HTTP error: {http_err}")
+        response_data = f"HTTP error occurred: {e}"
+        print(f"HTTP error: {e}")
     except Exception as e:
         logger.error(f"Error in send_post_request function: {type(e).__name__}: {str(e)}")
         response_data = f"Other error occurred: {str(e)}"
