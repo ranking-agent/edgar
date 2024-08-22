@@ -1,81 +1,54 @@
 import dash, bmt, json, requests, threading, time
-from dash import callback, callback_context
-import dash_daq as daq
+from dash import html, dash_table, dcc
+from dash_extensions.enrich import Input, Output, callback, State
 import dash_bootstrap_components as dbc
-from dash_extensions.enrich import DashProxy, Output, Input, State, html, dcc, \
-    ServersideOutputTransform
+import dash_daq as daq
+import logging
+from src.utils import LoggingUtil
+import os
 
-from trapi_qg import get_qg
-from byo_data import byo_layout
-from viz_module import vizlayout
+from templates import get_qg
+from src.visualization import vizlayout
 
+this_dir = os.path.dirname(os.path.realpath(__file__))
 
-app = DashProxy(
-    __name__,
-    pages_folder="",
-    transforms=[ServersideOutputTransform()],
-    suppress_callback_exceptions=True,
-    external_stylesheets=[dbc.themes.MATERIA, dbc.icons.FONT_AWESOME, dbc.themes.BOOTSTRAP],
-    use_pages=True
-)
-
-server = app.server
+logger = LoggingUtil.init_logging('edgar_dashboard', level=logging.WARNING, format='long', logFilePath=this_dir + '/')
 
 
+# Global variables to store progress and response
+progress = 0
+response_data = None
+request_in_progress = False
+response_status = 0
 tk = bmt.Toolkit()
 AC_URL = "https://answercoalesce-test.apps.renci.org/query"
 all_node_classes = tk.get_all_classes('entity')
-colors = {'background': 'white', 'background': '#7794B8', 'dropdown': '#6c6f73', 'text': '#000000'}
 
 
-sidebar = html.Div([
-        html.Div(
-            [
-                html.H2("EDGAR", style={"color": "#0096FF"}),
-            ],
-            className="sidebar-header",
-        ),
-        html.Hr(),
-        dbc.Nav(
-            [
-                dbc.NavLink(
-                    [html.I(className="fas fa-home me-2"), html.Span("Home")],
-                    href="/",
-                    active="exact",
-                ),
-                dbc.NavLink(
-                    [
-                        html.I(className="fa-solid fa-chart-line"),
-                        html.Span("EDGAR Dashboard"),
-                    ],
-                    id='home-link',
-                    href="/explore_edgar",
-                    active="exact",
-                ),
-                dbc.NavLink(
-                    [
-                        html.I(className="fa-solid fa-check-double"),
-                        html.Span(" Name->Curie"),
-                    ],
-                    id='curie-link',
-                    href="/normalize_node",
-                    active="exact",
-                ),
-                dbc.NavLink(
-                    [
-                        html.I(className="fa-solid fa-database"),
-                        html.Span("BYO Datasets"),
-                    ],
-                    id='byo-link',
-                    href="/dash_app_byo",
-                    active="exact",
-                ),
+def send_post_request(data):
+    global progress, response_data, request_in_progress, response_status
+    try:
+        request_in_progress = True
+        start_time = time.time()  # Record start time
+        response = requests.post(AC_URL, json=data)
+        response.raise_for_status()  # Raise an HTTPError if the HTTP request returned an unsuccessful status code
+        response_data = response.json()
+        response_status = response.status_code
+        end_time = time.time()  # Record end time
+        elapsed_time = end_time - start_time  # Calculate elapsed time
+        print(f"Time taken for POST request: {elapsed_time} seconds")
+    except requests.exceptions.HTTPError as http_err:
+        logger.error(f"Error in send_post_request function: {type(e).__name__}: {str(e)}")
+        response_data = f"HTTP error occurred: {http_err}"
+        print(f"HTTP error: {http_err}")
+    except Exception as e:
+        logger.error(f"Error in send_post_request function: {type(e).__name__}: {str(e)}")
+        response_data = f"Other error occurred: {str(e)}"
+        print(f"Error: {e}")
+    finally:
+        request_in_progress = False
+        progress = 100  # Set progress to 100 when done
 
-            ],
-            vertical=True,
-            pills=True,
-        ),
-    ], className="sidebar")
 
 source = html.Div([
     html.Div(html.B(children='Source Curie')),
@@ -158,31 +131,6 @@ predicate_temp_options = ['biolink:treats', 'biolink:affects', 'biolink:regulate
 'biolink:similar_to',
 'biolink:subclass_of']
 
-############# Normalization ########################
-def resolvename(name):
-    name_resolver_url = f'https://name-resolution-sri.renci.org/lookup?string={name}&offset=0&limit=2'
-    res = requests.post(name_resolver_url).json()
-    curie = ''
-    for rs in res:
-        if rs['label']==name or rs['label'].lower() == name.lower():
-            curie = rs['curie']
-            break
-    return curie
-
-
-robokop_link = html.A(
-    id = "robokop-link",
-    children=html.Img(src='/assets/robokop.png',style={'height':'2em','width':'6em','padding-left':'1em'}),
-    href='https://robokop.renci.org/',
-    target='_blank',
-    rel='noopener noreferrer')
-
-# Global variables to store progress and response
-progress = 0
-response_data = None
-request_in_progress = False
-response_status = 0
-
 
 submit_button = html.Div([
         html.Div([
@@ -192,66 +140,6 @@ submit_button = html.Div([
         dcc.Store(id='response-output-store', data={}),
 ])
 
-
-def send_post_request(data):
-    global progress, response_data, request_in_progress, response_status
-    try:
-        request_in_progress = True
-        start_time = time.time()  # Record start time
-        response = requests.post(AC_URL, json=data)
-        response.raise_for_status()  # Raise an HTTPError if the HTTP request returned an unsuccessful status code
-        response_data = response.json()
-        response_status = response.status_code
-        end_time = time.time()  # Record end time
-        elapsed_time = end_time - start_time  # Calculate elapsed time
-        print(f"Time taken for POST request: {elapsed_time} seconds")
-    except requests.exceptions.HTTPError as http_err:
-        response_data = f"HTTP error occurred: {http_err}"  # HTTP error
-        print(f"HTTP error: {http_err}")
-    except Exception as e:
-        response_data = f"Other error occurred: {str(e)}"  # Other errors
-        print(f"Error: {e}")
-    finally:
-        request_in_progress = False
-        progress = 100  # Set progress to 100 when done
-
-
-about = dbc.Container([
-    html.Div([
-        html.Div(
-            html.H3(
-                ['Summary'],
-                style={'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}
-            )
-        ),
-        html.Hr(),
-    ],
-        style={'background-color': 'whitesmoke', 'display': 'flex', 'flex-direction': 'row',
-               'align-items': 'center', 'justify-content': 'center'}
-    ),
-    html.Br(),
-    html.Div([
-            html.Div(
-                html.Article([
-                    "This research explores pathway enrichment strategies in biomedical Knowledge Graphs (KGs) as a versatile link-prediction approach, with drug repurposing exemplifying a significant application. Leveraging systems biology, network expression analysis, pathway analysis (PA), and machine learning (ML) methods, KGs aid in uncovering novel interactions among biomedical entities of interest. ",
-                    html.P(),
-                    "While these approaches excel in inferring missing edges within the KG, PA may overlook candidates with similar pathway effects. ",
-                    html.P(),
-                    "By utilizing enrichment-driven analyses on KG data from ROBOKOP, this study focuses on repurposing drug candidates for Alzheimer's disease, demonstrating the efficacy of enrichment strategies in linking entities for drug discovery. Our approach is validated through literature-based evidence derived from clinical trials, showcasing the potential of enrichment-driven strategies in linking biomedical entities."
-                ],
-                    style={'font-size': '20px'}
-                )
-            ),
-            html.Br(),
-            html.Div(
-                robokop_link
-            )
-
-        ],
-            style={'background-color': 'whitesmoke', 'display': 'flex', 'flex-direction': 'row',
-                   'align-items': 'center', 'justify-content': 'center'}
-    ),
-], className="p-3 bg-body-secondary rounded-3")
 
 parameters = html.Div([
     dcc.Store(id='parameters-visible', data=False),
@@ -267,6 +155,7 @@ parameters = html.Div([
     dcc.Store(id = 'param-json-store'),
     html.Div(id='param-output-json', style={'whiteSpace': 'pre-line'})
 ])
+
 
 explore_edgar = html.Div([dbc.Container([
                 dbc.Collapse([
@@ -308,7 +197,7 @@ explore_edgar = html.Div([dbc.Container([
                                              html.Div([source], style={'display': 'flex', 'flex-direction': 'row',
                                                                        'align-items': 'center',
                                                                        'justify-content': 'left'}),
-                                         # load_start,
+
                                          ], style={'width': '15em', 'padding-right': '1em'}),
                                          html.Td([
                                              html.H2('Predicates:'),
@@ -346,136 +235,45 @@ explore_edgar = html.Div([dbc.Container([
                 html.Div(id='output-data', style={'whiteSpace': 'pre-wrap'})
     ])
 
-normalize_node = dbc.Container([
-                dbc.Collapse([
-                    html.Div([
-                        html.Tr([
-                            html.Div(style={'padding-bottom': '3em', 'vertical-align': 'top'},
-                                     children=[
-                                         html.Td([
-                                             html.H2('Get Normalized Node:'),
-                                             html.Div([
-                                                 dcc.Input(id='searchname', value='', placeholder='Headache',
-                                                           type='text'),
-                                                 html.Button('Get Curie', id='submit-name', n_clicks=0),
-                                                 html.Div(id='curie-output'),
-                                                 dcc.Clipboard(
-                                                    target_id="curie-output",
-                                                    title="copy",
-                                                    style={
-                                                        "position": "absolute",
-                                                        "bottom": 5,
-                                                        "left": 20,
-                                                        "fontSize": 20,
-                                                        "verticalAlign": "top",
-                                                        'color': 'blue'
-                                                    },
-                                                 ),
-                                             ])
-                                         ], style={'width': '15em', 'padding-right': '1em'}),
-
-                                     ])
-                        ]),
-                    ], className="article-body")
-                ],
-                    id="collapse",
-                    is_open=True,
-                )
-            ], style={'display': 'flex', 'align-items': 'center', 'justify-content': 'center'})
-
-def page_container():
-    return html.Div(
-        children=[
-            html.H1(children=[
-                html.Div([
-                    html.Div('Enrichment-Driven GrAph Recommender (EDGAR)',
-                             style={'font-size': '40px', 'align-items': 'center', 'justify-content': 'center'})]),
-                ],
-                    style={'display': 'flex', 'flex-direction': 'row', 'align-items': 'center', 'justify-content': 'center',
-                            "color": "#0096FF", 'background-color': '#cbd3dd', 'width': '100%'}
-            ),
-            html.Div([
-
-            ],
-            id = 'page-content',
-            style={'padding-left': '6rem'}
-            )
-        ],
-    className='page-bg')
-
-
-app.layout = html.Div(
-    [
-        dcc.Location(id='url', refresh=False),
-        sidebar,
-        page_container(),
-    ]
-)
-
-####### NAVBAR CALLBACKS #######################################
-@app.callback(Output("page-content", "children"), [Input('url', 'pathname')])
-def display_content(pathname):
-    if pathname == "/dash_app_byo":
-        return byo_layout
-    elif pathname == "/explore_edgar":
-        return explore_edgar
-    elif pathname == "/normalize_node":
-        return normalize_node
-    else:
-        return about
-
-
-@app.callback( [Output("modal", "is_open"), Output("open", "n_clicks")], [Input("open", "n_clicks"), Input("close", "n_clicks")], [State("modal", "is_open")])
-def toggle_modal(n1, n2, is_open):
-    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if "close" in changed_id:
-        return False, {"display": "none"}
-
-    if n1 or n2:
-        return not is_open, {}
-
-    return is_open, {}
-
-
-####### NameResolver CALLBACK #######################################
-@callback(Output('curie-output', 'children'), [Input('searchname', 'value'), Input('submit-name', 'n_clicks')])
-def normalizeterm(searchterm, click):
-    if click > 0 and searchterm:
-        curie = resolvename(searchterm)
-        res = curie + ' Please Double Check!' if curie else 'Unknown'
-        return """Most Probable Curie: {} """.format(res)
-
 
 ####### PARAMETERS CALLBACKS #######################################
-@app.callback( Output('parameters-div', 'style'), Input('toggle-button', 'n_clicks'), State('parameters-visible', 'data'))
-def param_div_visibility(n_clicks, visible):
+@callback( Output('parameters-div', 'style'), Output('submit-message', 'children', allow_duplicate=True), Input('toggle-button', 'n_clicks'), State('parameters-visible', 'data'), State('source', 'value'), State('target', 'value'), State('predicate_dropdown', 'value'))
+def param_div_visibility(n_clicks, visible, source_value, target_value, predicate):
     if n_clicks > 0:
+        if not (bool(source_value) ^ bool(target_value)) or not (bool(predicate)):
+            msg = 'One "biolink" compliant Curie, a return Categories and Predicate is required'
+            style = {'color': 'red'}
+            return {'display': 'none'}, html.Span(msg, style=style)
+
+        curie = source_value if source_value else target_value
+
+        if not (':' in curie):
+            msg = [
+                f'{curie} is not "biolink" compliant, e.g., MONDO:0004975',
+                html.Br(),
+                html.Br(),
+                "See ",
+                dcc.Link('Name->Curie on the sidebar', href='/normalize_node'),
+                " for more details."
+            ]
+            style = {'color': 'red'}
+            return {'display': 'none'}, html.Span(msg, style=style)
         visible = not visible
-    return {'display': 'block' if visible else 'none'}
+    return {'display': 'block' if visible else 'none'}, ''
 
 
-@app.callback( Output('parameters-visible', 'data'), Input('toggle-button', 'n_clicks'), State('parameters-visible', 'data'))
+@callback( Output('parameters-visible', 'data'), Input('toggle-button', 'n_clicks'), State('parameters-visible', 'data'))
 def update_param_div_visibility(n_clicks, visible):
     if n_clicks > 0:
         return not visible
     return visible
 
 
-@app.callback( Output('submit-message', 'children', allow_duplicate=True), Output('param-json-store', 'data'), Input('param-submit-button', 'n_clicks'), State('pvalue-threshold', 'value'), State('result-length', 'value'), State('predicates-to-exclude', 'value'),State('source', 'value'), State('target', 'value'), State('predicate_dropdown', 'value'))
-def add_parameters(n_clicks, pvalue_threshold, result_length, predicates_to_exclude, source_value, target_value, predicate):
-    param_ctx = callback_context
+@callback( Output('submit-message', 'children', allow_duplicate=True), Output('param-json-store', 'data'), Input('param-submit-button', 'n_clicks'), State('pvalue-threshold', 'value'), State('result-length', 'value'), State('predicates-to-exclude', 'value'))
+def add_parameters(n_clicks, pvalue_threshold, result_length, predicates_to_exclude):
+    param_ctx = dash.callback_context
     if not param_ctx.triggered:
         return dash.no_update, dash.no_update
-
-    if not (bool(source_value) ^ bool(target_value)) or not (bool(predicate)):
-        msg = 'One "biolink" compliant Curie, a return Categories and Predicate is required'
-        return msg, dash.no_update
-
-    curie = source_value if source_value else target_value
-
-    if not (':' in curie):
-        msg = 'curies must be "biolink" compliant eg MONDO:004975'
-        return msg, dash.no_update
 
     trigger_id = param_ctx.triggered[0]['prop_id'].split('.')[0]
     if trigger_id == "param-submit-button":
@@ -488,13 +286,18 @@ def add_parameters(n_clicks, pvalue_threshold, result_length, predicates_to_excl
                     }
             }
 
-            return "Params Added!", params
+            msg = "Params Added!"
+            style = {'color': 'blue'}
+            return html.Span(msg, style=style), params
         except Exception as e:
-            return e, dash.no_update
+            logger.error(f"Error in add_parameters callback: {type(e).__name__}: {str(e)}")
+            msg = f"Error: {str(e)}"
+            style = {'color': 'red'}
+            return html.Span(msg, style=style), dash.no_update
 
 
 ####### TRAPI Query CALLBACKS #######################################
-@app.callback([Output('source_dropdown', 'options'), Output('predicate_dropdown', 'options'), Output('target_dropdown', 'options')], [Input('example-query-dropdown', 'value')])
+@callback([Output('source_dropdown', 'options'), Output('predicate_dropdown', 'options'), Output('target_dropdown', 'options')], [Input('example-query-dropdown', 'value')])
 def update_trapi_component_dropdowns(selected_option):
     if selected_option:
         split_values = selected_option.split('-')
@@ -507,7 +310,7 @@ def update_trapi_component_dropdowns(selected_option):
         return options, predicate_temp_options, options
 
 
-@app.callback([
+@callback([
         Output("response-output-store", "data"),
         Output("progress-gauge", "value"),
         Output("progress-interval", "disabled"),
@@ -534,7 +337,7 @@ def update_trapi_component_dropdowns(selected_option):
 )
 def show_json_output(params, n_clicks_send, n_intervals, n_clicks_visualize, n_clicks_download, source_value, target_value, source_category, predicate, object_aspect_qualifier, object_direction_qualifier, target_category):
     global progress, response_data, request_in_progress
-    ctx = callback_context
+    ctx = dash.callback_context
     if not ctx.triggered:
         return dash.no_update, dash.no_update, True, True, True, None, {'display': 'none'}, ''
 
@@ -543,58 +346,65 @@ def show_json_output(params, n_clicks_send, n_intervals, n_clicks_visualize, n_c
     if trigger_id == "send-request-button":
         if not (bool(source_value) ^ bool(target_value)) or not (bool(predicate)):
             msg = 'One "biolink" compliant Curie and Categories and Predicate is required'
-            return dash.no_update, dash.no_update, True, True, True, None, {'display': 'none'}, msg
+            style = {'color': 'red'}
+            return dash.no_update, dash.no_update, True, True, True, None, {'display': 'none'}, html.Span(msg, style=style)
 
         curie = source_value if source_value else target_value
 
         if not (':' in curie):
             msg = 'curies must be "biolink" compliant eg MONDO:004975'
-            return dash.no_update, dash.no_update, True, True, True, None, {'display': 'none'}, msg
+            style = {'color': 'red'}
+            return dash.no_update, dash.no_update, True, True, True, None, {'display': 'none'}, html.Span(msg, style=style)
 
         is_source = bool(source_value)
         data = get_qg([curie], is_source, [predicate], source_category, target_category, object_aspect_qualifier, object_direction_qualifier)
+
+        # Validation to check for trapi 'query_graph'
+        if "message" not in data or "query_graph" not in data["message"]:
+            msg = 'Invalid data format: "message" or "query_graph" key missing'
+            style = {'color': 'red'}
+            return dash.no_update, dash.no_update, True, True, True, None, {'display': 'none'}, html.Span(msg, style=style)
 
         progress = 0  # Reset progress
         response_data = None  # Reset response data
         request_in_progress = True  # Mark the request as in progress
 
-        # Send the request asynchronously
         if params:
             data.update(params)
 
         threading.Thread(target=send_post_request, args=(data,)).start()
 
-        return dash.no_update, 0, False, True, True, None, {'display': 'flex'}, 'Done!'
+        return dash.no_update, 0, False, True, True, None, {'display': 'flex'}, 'Request sent, please wait...'
 
     elif trigger_id == "progress-interval":
         if request_in_progress:
             # Simulate progress updates while the request is in progress
-            simulated_progress = min(progress + 10, 90)  # Cap at 90% until request is done
+            simulated_progress = min(progress + 10, 90)  # Let's Cap at 90% until request is done
             progress = simulated_progress
-            return dash.no_update, progress, False, True, True, None, dash.no_update, 'wait...'
+            return dash.no_update, progress, False, True, True, None, dash.no_update, 'Processing, please wait...'
         else:
             # When the request completes
             if progress == 100:
-                return json.dumps(response_data, indent=2), 100, True, False, False, None, dash.no_update, 'Done!'
+                if response_data:
+                    return json.dumps(response_data, indent=2), 100, True, False, False, None, dash.no_update, 'Done!'
+                else:
+                    msg = 'No data available'
+                    style = {'color': 'red'}
+                    return dash.no_update, 100, True, True, True, None, dash.no_update, html.Span(msg, style=style)
 
     elif trigger_id == "visualize-button":
-        # Call the visualize function with the response data
-        # vm.vizlayout( response_data )
-        return dash.no_update, dash.no_update, True, False, False, None, dash.no_update, 'Done!'  # Keep content visible
+        return dash.no_update, dash.no_update, True, False, False, None, dash.no_update, 'Scroll up, visualization in progress...'
 
     elif trigger_id == "download-button":
-        return dash.no_update, dash.no_update, True, False, False, dict(content=json.dumps(response_data, indent=2), filename="response_data.json"), dash.no_update, 'Done!'
+        return dash.no_update, dash.no_update, True, False, False, dict(content=json.dumps(response_data, indent=2), filename="response_data.json"), dash.no_update, 'Download ready!'
 
-    return dash.no_update, dash.no_update, True, False, False, None, dash.no_update, dash.no_update  # Default to keeping content hidden
+    return dash.no_update, dash.no_update, True, True, True, None, dash.no_update, dash.no_update  # Default to keeping content hidden
 
-@app.callback(Output('output-data', 'children', allow_duplicate=True), [Input('response-output-store', 'data'), Input("visualize-button", "n_clicks")])
+
+@callback(Output('output-data', 'children', allow_duplicate=True), [Input('response-output-store', 'data'), Input("visualize-button", "n_clicks")])
 def visualize_data(store_data, visualize_nclicks):
     if store_data:
         if visualize_nclicks > 0:
             return vizlayout(store_data)
     return ""
 
-
-#### Visualize the Output ######
-if __name__ == "__main__":
-    app.run_server(debug=False)

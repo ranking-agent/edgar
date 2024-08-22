@@ -39,4 +39,4 @@ EXPOSE 8050
 #ENV NAME DashApp
 
 # Run app.py when the container launches
-CMD ["python", "dash_app.py"]
+CMD ["python", "app.py"]

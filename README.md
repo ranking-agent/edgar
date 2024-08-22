@@ -5,15 +5,30 @@ While these approaches excel in inferring missing edges within the KG, PA may ov
 By utilizing enrichment-driven analyses on KG data from ROBOKOP, this study focuses on repurposing drug candidates for Alzheimer's disease, demonstrating the efficacy of enrichment strategies in linking entities for drug discovery. Our approach is validated through literature-based evidence derived from clinical trials, showcasing the potential of enrichment-driven strategies in linking biomedical entities.
 
 AUTHORS: Chris Bizon
+
 email address: cbizon@renci.org
+
 website: https://www.renci.org
+
 company name: Renaissance Computing Institute
 address: 100 Europa Drive, Durham, NC.
 
 HOW TO RUN
 
-# Build the Docker image
-`docker build -t edgar:latest .`
+## LOCALLY
+Clone the repo: `git clone  https://github.com/ranking-agent/edgar.git`
 
-# Push the Docker image
-`docker push edgar:latest`
+cd to the dir: `cd edgar`
+
+Install requirements: `pip install -r requirements.txt`
+
+
+## DEPLOYMENT
+
+Build the Docker image: `docker build -t edgar:latest .`
+
+Push the Docker image: `docker push edgar:latest`
+
+## Live version
+
+`https://edgar.apps.renci.org/`
