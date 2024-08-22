@@ -385,11 +385,12 @@ def show_json_output(params, n_clicks_send, n_intervals, n_clicks_visualize, n_c
         else:
             # When the request completes
             if progress == 100:
-                if response_data:
+                if response_data and "message" in response_data:
                     return json.dumps(response_data, indent=2), 100, True, False, False, None, dash.no_update, 'Done!'
                 else:
-                    msg = 'No data available'
+                    msg = 'No response available'
                     style = {'color': 'red'}
+                    logger.error(f"Error in show_json_output callback: {response_data}")
                     return dash.no_update, 100, True, True, True, None, dash.no_update, html.Span(msg, style=style)
 
     elif trigger_id == "visualize-button":
