@@ -241,18 +241,17 @@ def pickgroup2curieedge(enrichment2group_edge, group2curie_edge, kg_nodes, kg_ed
 def generate_legend(node_categories, category_colors):
     legend_items = []
     for category in node_categories:
-        color = category_colors.get(category, "#000000")  # Default to black if not found
+        color = category_colors.get(category, "#000000")
         shape = get_node_shape(node_categories, category)
         legend_items.append(
             html.Div([
                 html.Span(
-                    style={'display': 'inline-block', 'width': '10px', 'height': '10px', 'background-color': color,
+                    style={'display': 'inline-block', 'width': '9px', 'height': '9px', 'background-color': color,
                            'shape': shape}),
-                html.Span(f"{category.split(':')[1]} ({shape})", style={'margin-left': '10px', 'font-size': '10px'})
+                html.Span(f"{category.split(':')[1]} ({shape})", style={'margin-left': '10px', 'font-size': '9px'})
             ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '5px'})
         )
 
-    # Create a responsive flexbox layout with the legend items
     return html.Div(legend_items,
                     style={'display': 'flex', 'flex-wrap': 'wrap', 'gap': '20px', 'align-items': 'right'})
 
@@ -353,7 +352,7 @@ def onetable(df, tableid):
         style_table={"overflowY": "auto", "overflowX": "auto", "width": "100%"},
         style_header={'backgroundColor': '#cbd3dd', 'color': 'black', 'fontWeight': 'bold', 'text-align': 'center'},
         style_data_conditional=custom_conditional_style,
-        style_cell={'text-align': 'left', "minWidth": "70px", "width": "50px", "maxWidth": "200px",
+        style_cell={'text-align': 'left', "minWidth": "50px", "width": "40px", "maxWidth": "200px",'fontSize':12, 'font-family':'sans-serif',
                     "textOverflow": "ellipsis", 'overflow': 'hidden', 'whiteSpace': 'nowrap'},
         filter_options={"placeholder_text": "Filter column..."},
         filter_action="native",
@@ -432,7 +431,7 @@ def vizlayout(answerset):
                         ),
                     )
                 ], style={"padding": "20px", 'background-color': '#cbd3dd', 'height': '65vh'}), width=2),
-                dbc.Col(html.Div([html.P("select a row(s) to see the >>inference path", style={'background-color': '#cbd3dd'}), html.Div(id='result-table-container', children=[
+                dbc.Col(html.Div([html.Marquee("Select row(s) then scroll up to see the inference path", style={'background-color': '#cbd3dd', 'color': '#000080'}), html.Div(id='result-table-container', children=[
                         dash_table.DataTable(
                             id='result-table',
                             columns=[{"name": i, "id": i} for i in dbf.columns],
@@ -582,8 +581,8 @@ def update_elements( selected_data, selected_rows, kg_nodes, kg_edges, aux_graph
                     [
                         html.H5(f"{result} has {len(elements_list)} Paths", className="card-title"),
                         generate_legend(node_categories, category_colors),
-                        html.Div(html.P("select an edge to view its support graph",
-                                        style={'background-color': '#cbd3dd', 'display': 'inline-block'}),
+                        html.Div(html.Marquee("Select an edge to view its support graph",
+                                        style={'background-color': '#cbd3dd', 'color': '#000080', 'display': 'inline-block'}),
                                  style={'text-align': 'right'}),
                     ]),
                     dbc.CardBody(card_body)],
@@ -609,20 +608,31 @@ def display_support_graph(edge_data, lookup_basket, enrichment_basket):
     support_graphs = edge_data.get('support_graphs', [])
 
     if not support_graphs:
-        return html.Div()
+        edge_data_items = [html.Div([html.B(f"{key}: "), html.Span(str(value))]) for key, value in edge_data.items()]
+        edge_data_table_component = html.Div(
+            edge_data_items,
+            style={'maxHeight': '300px', 'overflowY': 'auto', 'backgroundColor': '#f8f9fa', 'padding': '10px',
+                   'border': '1px solid #ddd'}
+        )
 
-    if support_graphs and isinstance(support_graphs[0], str):
+        return html.Div([
+            html.P("No support graphs found. Displaying edge_data dictionary:",
+                   style={'backgroundColor': '#f8d7da', 'color': '#721c24'}),
+            edge_data_table_component
+        ])
+
+    if isinstance(support_graphs[0], str):
         lookup_baskets = [basket for baskets in lookup_basket.values() for basket in baskets]
         lookup = pd.DataFrame(lookup_baskets, columns=["Object1", "Predicate1", "Subject1", "Predicate2", "Object2"])
         lookup.drop_duplicates(ignore_index=True, inplace=True)
-
         lookup_table_component = onetable(lookup, 'datatable-lookup-table')
         lookup_table_output = html.Div([html.P("LOOKUP Members ↓ ", style={'backgroundColor': '#cbd3dd'}), lookup_table_component])
         return lookup_table_output
-    elif support_graphs and isinstance(support_graphs[0], list):
+    elif isinstance(support_graphs[0], list):
         enrichment_baskets = [basket for baskets in enrichment_basket.values() for basket in baskets]
         enrichment = pd.DataFrame(enrichment_baskets, columns=["Subject", "Predicate1", "Object", "Pvalue", "Knowledge_Source"])
         enrichment.drop_duplicates(ignore_index=True, inplace=True)
+        enrichment.sort_values("Pvalue", ascending=True, inplace=True)
         enrich_table_component = onetable(enrichment, 'datatable-enrich-table')
         enrich_table_output = html.Div([html.P(f"RULE(s) ↓ for the {len(enrichment)} paths", style={'backgroundColor': '#cbd3dd'}), enrich_table_component])
         return enrich_table_output
