@@ -114,7 +114,7 @@ about = dbc.Container([
                     html.P(),
                     "While these approaches excel in inferring missing edges within the KG, PA may overlook candidates with similar pathway effects. ",
                     html.P(),
-                    "By utilizing enrichment-driven analyses on KG data from ROBOKOP, this paper applied this method on Alzheimer's disease case study, demonstrating the efficacy of enrichment strategies in linking entities for drug repurposing. Our approach is validated through literature-based evidence derived from clinical trials, showcasing the potential of enrichment-driven strategies in linking biomedical entities."
+                    "By utilizing enrichment-driven analyses on KG data from ROBOKOP, our EDGAR paper applied this method on Alzheimer's disease case study, demonstrating the efficacy of enrichment strategies in linking entities for drug repurposing. Our approach is validated through literature-based evidence derived from clinical trials, showcasing the potential of enrichment-driven strategies in linking biomedical entities."
                 ],
                     style={'font-size': '20px'}
                 )
