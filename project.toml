@@ -1,12 +1,12 @@
 [project]
 name = "edgar"
-version = "0.1.0"
-description = "Enrichment Driven Graph Recommender Aid"
+version = "1.0.1"
+description = "Enrichment Driven GrAph Reeasoner"
 authors = ["Chris Bizon <cbizon@renci.org>"]
 license = "MIT"
 readme = "README.md"
 homepage = "https://answercoalesce-test.apps.renci.org/query"
-repository = "https://github.com/wumirose/Edgar.git"
+repository = "https://github.com/ranking-agent/edgar.git"
 
 [tool.poetry]
 # Additional Poetry-specific configuration here
