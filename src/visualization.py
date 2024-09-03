@@ -627,7 +627,7 @@ def update_elements( selected_data, selected_rows, kg_nodes, kg_edges, aux_graph
 def store_edge_data( edge_data ):
     edge_data = [edge for edge in edge_data if edge is not None]
     if edge_data:
-        print('edge_data', edge_data[0]['data'])
+        # print('edge_data len', len(edge_data[0]['data']))
         return edge_data[0]['data']
     return {}
 
