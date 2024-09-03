@@ -35,8 +35,8 @@ def load_data(contents, filename):
 @callback(Output('output-data', 'children'), [Input('store-response', 'data')])
 def display_data(store_data):
     if store_data:
+        logger.info(f"Data uploaded, please wait...")
         result = vizlayout(store_data)
-        logger.info(f"Data uploaded!")
         return result 
     logger.info("No data loaded to display")
     return html.Div("No data loaded")

@@ -114,7 +114,7 @@ about = dbc.Container([
                     html.P(),
                     "While these approaches excel in inferring missing edges within the KG, PA may overlook candidates with similar pathway effects. ",
                     html.P(),
-                    "By utilizing enrichment-driven analyses on KG data from ROBOKOP, this study focuses on repurposing drug candidates for Alzheimer's disease, demonstrating the efficacy of enrichment strategies in linking entities for drug discovery. Our approach is validated through literature-based evidence derived from clinical trials, showcasing the potential of enrichment-driven strategies in linking biomedical entities."
+                    "By utilizing enrichment-driven analyses on KG data from ROBOKOP, this paper applied this method on Alzheimer's disease case study, demonstrating the efficacy of enrichment strategies in linking entities for drug repurposing. Our approach is validated through literature-based evidence derived from clinical trials, showcasing the potential of enrichment-driven strategies in linking biomedical entities."
                 ],
                     style={'font-size': '20px'}
                 )
@@ -174,7 +174,7 @@ def page_container():
         children=[
             html.H1(children=[
                 html.Div([
-                    html.Div('Enrichment-Driven GrAph Recommender (EDGAR)',
+                    html.Div('Enrichment-Driven GrAph Reasoner (EDGAR)',
                              style={'font-size': '40px', 'align-items': 'center', 'justify-content': 'center'})]),
                 ],
                     style={'display': 'flex', 'flex-direction': 'row', 'align-items': 'center', 'justify-content': 'center',

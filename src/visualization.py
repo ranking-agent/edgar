@@ -1,7 +1,7 @@
 import pandas as pd
 import orjson
 from io import StringIO
-from dash import html, dash_table, dcc
+from dash import html, dash_table, dcc, callback_context
 from dash_extensions.enrich import Input, Output, callback, State, ALL
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -264,6 +264,7 @@ def generate_elements(inference_edge, kg_nodes, kg_edges, aux_graphs, node_categ
     enriched2grouplist, lookup_lists, pvalues = generate_rules(inference_edge, kg_nodes, kg_edges, aux_graphs)
 
     support_graphs_pvalues = sorted(zip(support_graphs, pvalues), key=lambda x: x[1])
+    # support_graphs_pvalues = zip(support_graphs, pvalues)
 
     for graph_index, (graph, pvalue) in enumerate(support_graphs_pvalues):
         elements = []
@@ -408,6 +409,7 @@ def vizlayout(answerset):
                      ],
                     style={'height': 200}),
             ], style={'margin': '1em'}),
+            html.Div(id="hmmm-viz-gone-wrong"),
             dbc.Row([
                 dbc.Col(html.Div([
                     html.H2("Filter by", style={"color": "#0096FF", 'background-color': '#cbd3dd'}),
@@ -450,18 +452,47 @@ def vizlayout(answerset):
 
 
 ########## Initial Data Storage #############
-@callback(Output('stored-qg', 'data'), Output('stored-kg-nodes', 'data'), Output('stored-kg-edges', 'data'), Output('stored-results', 'data'), Output('stored-aux-graphs', 'data'), Output('stored-node-categories', 'data'), Output('stored-category-colors', 'data'), Output('stored-inferred-df', 'data'), Input('answerset-input', 'data'))
+@callback(Output("hmmm-viz-gone-wrong", "children"), Output('stored-qg', 'data'), Output('stored-kg-nodes', 'data'), Output('stored-kg-edges', 'data'), Output('stored-results', 'data'), Output('stored-aux-graphs', 'data'), Output('stored-node-categories', 'data'), Output('stored-category-colors', 'data'), Output('stored-inferred-df', 'data'), Input('answerset-input', 'data'))
 def update_stores(json_answerset):
     if not json_answerset:
-        return [], [], [], [], [], [], [], []
+        msg = "no_answerset"
+        logger.error(msg)
+        return html.Div(msg), [], [], [], [], [], [], [], []
+
     answerset = orjson.loads(json_answerset)
+    if "message" not in answerset:
+        msg = "No 'message' the response json file"
+        logger.error(msg)
+        return html.Div(msg), [], [], [], [], [], [], [], []
+
+    if "query_graph" not in answerset["message"]:
+        msg = "No 'query_graph' in the response message"
+        logger.error(msg)
+        return html.Div(msg), [], [], [], [], [], [], [], []
+
+    if "knowledge_graph" not in answerset["message"]:
+        msg = "No 'knowledge_graph' in the response message"
+        logger.error(msg)
+        return html.Div(msg), [], [], [], [], [], [], [], []
+
+    if "results" not in answerset["message"]:
+        msg = "No 'results' in the response message"
+        logger.error(msg)
+        return html.Div(msg), [], [], [], [], [], [], [], []
+
+    if "auxiliary_graphs" not in answerset["message"]:
+        msg = "No 'auxiliary_graphs' in the response message"
+        logger.error(msg)
+        return html.Div(msg), [], [], [], [], [], [], [], []
+
     query_graph, kg_edges, kg_nodes, results, aux_graphs = get_answer_components(answerset)
     node_categories = get_all_node_categories(kg_nodes)
     category_colors = generate_color_map(node_categories)
 
     df = get_inferred_result_df(kg_edges, kg_nodes, results)
+    # print(df[[]].head(20))
 
-    return query_graph, kg_nodes, kg_edges, results, aux_graphs, node_categories, category_colors, df.to_json(orient='split')
+    return '', query_graph, kg_nodes, kg_edges, results, aux_graphs, node_categories, category_colors, df.to_json(orient='split')
 
 
 ########## Display Inference Table #############
@@ -503,42 +534,41 @@ def update_options(inferred_values):
     return inferred_values
 
 
-@callback([Output('result-table-container', 'children', allow_duplicate=True)], [Input('inferred-checklist', 'value')], [State('result-table', 'data')], prevent_initial_call=True)
+@callback([Output('result-table-container', 'children', allow_duplicate=True),  Output('inferred-checklist', 'disabled')], [Input('inferred-checklist', 'value')], [State('result-table', 'data')], prevent_initial_call=True)
 def filter_table( selected_values, data):
     if not selected_values:
         raise PreventUpdate
+    if not data:
+        return html.Div(id="result-table", style={'display': 'None'}), True
+    df = pd.DataFrame(data)
+    if len(selected_values) == 2:
+        filtered_df = df
     else:
-        if not data:
-            return []
-        df = pd.DataFrame(data)
-        if len(selected_values) == 2:
-            filtered_df = df
-        else:
-            selected = [', '.join(selected_values)]
-            filtered_df = df[df['Enrichment_method'].isin(selected)]
-        return dash_table.DataTable(
-                data=filtered_df.to_dict('records'),
-                columns=[{"name": i, "id": i} for i in filtered_df.columns],
-                id="result-table",
-                style_table={"overflowY": "auto", "overflowX": "auto", "width": "99%"},
-                style_header={'backgroundColor': '#cbd3dd', 'color': 'black', 'fontWeight': 'bold', 'text-align': 'center'},
-                style_data_conditional=custom_conditional_style,
-                style_cell={'text-align': 'left', "minWidth": "70px", "width": "100px", "maxWidth": "200px",
-                            "textOverflow": "ellipsis", 'overflow': 'hidden', 'whiteSpace': 'nowrap'},
-                filter_options={"placeholder_text": "Filter column..."},
-                filter_action="native",
-                sort_action="native",
-                sort_mode='multi',
-                column_selectable="single",
-                row_selectable='multi',
-                selected_rows=[],
-                selected_columns=[],
-                page_action='native',
-                page_current=0,
-                page_size=10,
-                fixed_rows={"headers": True, "data": 0},
-                fixed_columns={"headers": True, "data": 0},
-            ),
+        selected = [', '.join(selected_values)]
+        filtered_df = df[df['Enrichment_method'].isin(selected)]
+    return dash_table.DataTable(
+            data=filtered_df.to_dict('records'),
+            columns=[{"name": i, "id": i} for i in filtered_df.columns],
+            id="result-table",
+            style_table={"overflowY": "auto", "overflowX": "auto", "width": "99%"},
+            style_header={'backgroundColor': '#cbd3dd', 'color': 'black', 'fontWeight': 'bold', 'text-align': 'center'},
+            style_data_conditional=custom_conditional_style,
+            style_cell={'text-align': 'left', "minWidth": "70px", "width": "100px", "maxWidth": "200px",
+                        "textOverflow": "ellipsis", 'overflow': 'hidden', 'whiteSpace': 'nowrap'},
+            filter_options={"placeholder_text": "Filter column..."},
+            filter_action="native",
+            sort_action="native",
+            sort_mode='multi',
+            column_selectable="single",
+            row_selectable='multi',
+            selected_rows=[],
+            selected_columns=[],
+            page_action='native',
+            page_current=0,
+            page_size=10,
+            fixed_rows={"headers": True, "data": 0},
+            fixed_columns={"headers": True, "data": 0},
+        ), False
 
 
 # ##### Path Display callbacks ####################
@@ -595,7 +625,9 @@ def update_elements( selected_data, selected_rows, kg_nodes, kg_edges, aux_graph
 
 @callback( Output('stored-edge-data', 'data'), Input({'type': 'cytoscape', 'index': ALL}, 'tapEdge'))
 def store_edge_data( edge_data ):
-    if edge_data and any(edge_data):
+    edge_data = [edge for edge in edge_data if edge is not None]
+    if edge_data:
+        print('edge_data', edge_data[0]['data'])
         return edge_data[0]['data']
     return {}
 
