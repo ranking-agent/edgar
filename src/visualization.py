@@ -205,6 +205,10 @@ def pickgroup2curieedge(enrichment2group_edge, group2curie_edge, kg_nodes, kg_ed
     terminals = [group2curie_edge['subject'], group2curie_edge['object']]
     finaledges = []
     pvalues = set()
+
+    # print('enrichment2group_edge', enrichment2group_edge)
+    # print()
+    # print('group2curie_edge', group2curie_edge)
     for attributes in enrichment2group_edge["attributes"]:  # ususally one
         enrichment2group_support_graphs = attributes["value"]
         # Each of these exists in the auxiliary graph
@@ -229,10 +233,20 @@ def pickgroup2curieedge(enrichment2group_edge, group2curie_edge, kg_nodes, kg_ed
                         finaledge = [kg_nodes[object_]["name"], group2curie_edge["predicate"],
                                      kg_nodes[next_element]["name"]]
                     elif object_ in terminals:
-                        next_element = terminals[
-                            terminals.index(object_) + 1] if object_ in terminals and terminals.index(
-                            object_) + 1 < len(
-                            object_) else None
+                        try:
+                            next_element = terminals[
+                                terminals.index(object_) + 1] if object_ in terminals and terminals.index(
+                                object_) + 1 < len(
+                                object_) else None
+                        except:
+                            next_element = terminals[
+                                terminals.index(object_)] if object_ in terminals and terminals.index(
+                                object_) + 1 < len(object_) else None
+
+                        # next_element = terminals[
+                        #     terminals.index(object_) + 1] if object_ in terminals and terminals.index(
+                        #     object_) + 1 < len(
+                        #     object_) else None
                         finaledge = [group2curie_edge["predicate"], kg_nodes[next_element]["name"]]
                     finaledges.append(theedge + finaledge)
     return pvalues, finaledges

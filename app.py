@@ -18,15 +18,8 @@ app = DashProxy(
 )
 
 server = app.server
-
-
-robokop_link = html.A(
-    id = "robokop-link",
-    children=html.Img(src='/assets/robokop.png',style={'height':'2em','width':'6em','padding-left':'1em'}),
-    href='https://robokop.renci.org/',
-    target='_blank',
-    rel='noopener noreferrer')
-
+app.title = 'EDGAR'
+app._favicon = 'Logo.ico'
 
 colors = {'background': 'white', 'background': '#7794B8', 'dropdown': '#6c6f73', 'text': '#000000'}
 
@@ -108,25 +101,30 @@ about = dbc.Container([
     ),
     html.Br(),
     html.Div([
-            html.Div(
-                html.Article([
-                    "This research explores pathway enrichment strategies in biomedical Knowledge Graphs (KGs) as a versatile link-prediction approach, with drug repurposing exemplifying a significant application. Leveraging systems biology, network expression analysis, pathway analysis (PA), and machine learning (ML) methods, KGs aid in uncovering novel interactions among biomedical entities of interest. ",
-                    html.P(),
-                    "While these approaches excel in inferring missing edges within the KG, PA may overlook candidates with similar pathway effects. ",
-                    html.P(),
-                    "By utilizing enrichment-driven analyses on KG data from ROBOKOP, our EDGAR paper applied this method on Alzheimer's disease case study, demonstrating the efficacy of enrichment strategies in linking entities for drug repurposing. Our approach is validated through literature-based evidence derived from clinical trials, showcasing the potential of enrichment-driven strategies in linking biomedical entities."
-                ],
-                    style={'font-size': '20px'}
-                )
-            ),
-            html.Br(),
-            html.Div(
-                robokop_link
+        html.Div(
+            html.Article([
+                "Leveraging systems biology, network expression analysis, pathway analysis (PA), rule learning and machine learning (ML) methods, KGs aid in uncovering novel interactions among biomedical entities of interest. ",
+                "While these approaches excel in inferring missing edges within the KG, they may overlook candidates with similar pathway effects. ",
+                html.P(),
+                "This research explores pathway enrichment strategies in biomedical Knowledge Graphs (KGs) as a versatile link-prediction approach, with drug repurposing exemplifying a significant application in the paper. ",
+                html.P(),
+                "By utilizing enrichment-driven analyses on KG data from ",
+                html.A(
+                    "ROBOKOP",
+                    href='https://robokop.renci.org/',
+                    target='_blank',
+                    rel='noopener noreferrer',
+                    style={'color': 'blue', 'text-decoration': 'underline'}
+                ),
+                ", our EDGAR paper demonstrates the efficacy of enrichment strategies in linking entities for drug repurposing. Our approach is validated through literature-based evidence derived from clinical trials, showcasing the potential of enrichment-driven strategies in linking biomedical entities."
+            ],
+                style={'font-size': '20px'}
             )
-
-        ],
-            style={'background-color': 'whitesmoke', 'display': 'flex', 'flex-direction': 'row',
-                   'align-items': 'center', 'justify-content': 'center'}
+        ),
+        html.Br(),
+    ],
+        style={'background-color': 'whitesmoke', 'display': 'flex', 'flex-direction': 'row',
+               'align-items': 'center', 'justify-content': 'center'}
     ),
 ], className="p-3 bg-body-secondary rounded-3")
 
@@ -242,4 +240,4 @@ def normalizeterm(searchterm, click):
 
 #### Visualize the Output ######
 if __name__ == "__main__":
-    app.run_server(debug=False)
+    app.run_server(debug=True)

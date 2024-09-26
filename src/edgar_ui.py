@@ -21,7 +21,7 @@ response_data = None
 request_in_progress = False
 response_status = 0
 tk = bmt.Toolkit()
-AC_URL = "https://answercoalesce-test.apps.renci.org/query"
+AC_URL = "https://answercoalesce.renci.org/query"
 all_node_classes = tk.get_all_classes('entity')
 
 
@@ -166,12 +166,16 @@ explore_edgar = html.Div([dbc.Container([
                                     dcc.Dropdown(
                                         id="example-query-dropdown",
                                         options=[
-                                            {'label': "What Drugs treats Disease Y?",
+                                            {'label': "What Drugs treats Disease Y eg. MONDO:0004975?",
                                              'value': "biolink:Drug-biolink:treats-biolink:Disease"},
-                                            {'label': "What Genes is associated with Disease X?",
-                                             'value': "biolink:Gene-biolink:associated_with-biolink:Disease"},
-                                            {'label': "What are the Biological Process and Molecular Activities that affects Genes X?",
-                                                'value': "biolink:BioProcessOrActivity-biolink:affects-biolink:Gene"}
+                                            {'label': "What Genes are genetically associated with Disease X eg. DOID:0050430?",
+                                             'value': "biolink:Gene-biolink:genetically_associated_with-biolink:Disease"},
+                                            {'label': "What are the Phenotypes of Disease X eg. MONDO:0005147?",
+                                                'value': "biolink:Disease-biolink:has_phenotype-biolink:PhenotypicFeature"},
+                                            {'label': "What are the Genes that affects Phenotype X eg. HP:0003637?",
+                                                'value': "biolink:Gene-biolink:affects-biolink:PhenotypicFeature"},
+                                            {'label': "What are the Phenotypes of Gene X eg. NCBIGene:122481?",
+                                                'value': "biolink:Gene-biolink:has_phenotype-biolink:PhenotypicFeature"}
                                         ],
                                         value=None,
                                         placeholder='Select an example query pattern...optional',
@@ -409,3 +413,13 @@ def visualize_data(store_data, visualize_nclicks):
             return vizlayout(store_data)
     return ""
 
+
+@callback(
+    Output('output-data', 'children', allow_duplicate=True),
+    [Input('example-query-dropdown', 'value'),
+     Input('source_dropdown', 'value'),
+     Input('predicate_dropdown', 'value'),
+     Input('target_dropdown', 'value')]
+)
+def update_output(selected_query, source_value, predicate_value, target_value):
+    return f'Selected Query: {selected_query}, Source: {source_value}, Predicate: {predicate_value}, Target: {target_value}'
